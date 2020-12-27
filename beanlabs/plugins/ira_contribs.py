@@ -9,7 +9,7 @@ dollars contributed to a retirement account over time.
 
 For example, a possible configuration could be:
 
-    plugin "experiments.plugins.ira_contribs" "{
+    plugin "beanlabs.plugins.ira_contribs" "{
         'currency': 'IRAUSD',
         'flag': 'M',
         'accounts': {

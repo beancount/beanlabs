@@ -5,7 +5,7 @@ import unittest
 
 from beancount import loader
 from beancount.core import data
-from experiments.plugins import tag_pending
+from beanlabs.plugins import tag_pending
 from beancount.utils import test_utils
 
 

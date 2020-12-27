@@ -7,7 +7,7 @@ from beancount.core import data
 from beancount.parser import cmptest
 from beancount.parser import printer
 from beancount import loader
-from experiments.plugins import transfer_lots
+from beanlabs.plugins import transfer_lots
 
 
 class TestFillAccountOpen(cmptest.TestCase):
@@ -15,7 +15,7 @@ class TestFillAccountOpen(cmptest.TestCase):
     @loader.load_doc()
     def test_transfer_lots(self, entries, errors, _):
         """
-        plugin "experiments.plugins.transfer_lots" "transfer"
+        plugin "beanlabs.plugins.transfer_lots" "transfer"
 
         2020-01-01 open Assets:Bank:Checking
         2020-01-01 open Assets:Coinbase  "FIFO"

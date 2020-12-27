@@ -8,7 +8,7 @@ from beancount.core import position
 from beancount.core import data
 from beancount.utils.date_utils import parse_date_liberally as DD
 
-import wash_calculator
+from beanlabs.washsales import wash_calculator
 
 
 

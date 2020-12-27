@@ -3,7 +3,7 @@ __license__ = "GNU GPLv2"
 
 from beancount.utils import test_utils
 
-from ledgerhub.scripts import remove_crdb
+from beanlabs.ingest import remove_crdb
 
 
 class TestScriptRemoveCRDB(test_utils.TestCase):

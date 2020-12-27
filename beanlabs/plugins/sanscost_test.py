@@ -3,7 +3,7 @@ __license__ = "GNU GPLv2"
 
 import unittest
 
-from beancount.plugins import sanscost
+from beanlabs.plugins import sanscost
 from beancount import loader
 
 

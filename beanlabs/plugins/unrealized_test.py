@@ -4,13 +4,14 @@ __license__ = "GNU GPLv2"
 import unittest
 import re
 
-from beancount.plugins import unrealized
 from beancount.core.number import D
 from beancount.core.number import ZERO
 from beancount.core import data
 from beancount.parser import options
 from beancount.ops import validation
 from beancount import loader
+
+from beanlabs.plugins import unrealized
 
 
 def get_entries_with_narration(entries, regexp):

@@ -269,6 +269,23 @@ py_test(
     ],
 )
 
+py_library(
+    name = "sanscost",
+    srcs = ["sanscost.py"],
+    deps = [
+        "//beancount/core:data",
+    ],
+)
+
+py_test(
+    name = "sanscost_test",
+    srcs = ["sanscost_test.py"],
+    deps = [
+        ":sanscost",
+        "//beancount:loader",
+        "//beancount:plugins_for_tests",
+    ],
+)
 
 # NOTE: Disabled because dependent beancount.ops.holdings has been deprecated.
 # And we will not port this--realizing unrealized gains is the wrong approach anyway.

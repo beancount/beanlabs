@@ -8,7 +8,8 @@ from os import path
 from beancount import loader
 from beancount.parser import cmptest
 from beancount.utils import test_utils
-from experiments.sharing import split_expenses
+
+from beanlabs.sharing import split_expenses
 
 
 class TestSplitExpenses(cmptest.TestCase):
