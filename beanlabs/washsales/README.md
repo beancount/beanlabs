@@ -1,4 +1,4 @@
-Scripts to handle wash sales.
+# Scripts to Handle Wash Sales
 
 This is a set of scripts and plugins which I use to identify and mark stock
 sales that are to be washed according to the rules set by the IRS. There are two

@@ -1,3 +1,5 @@
+# Experiment: Beancount from SQLite
+
 Experiments in providing the contents of Beancount directly in a SQLite
 database, without converting into an SQL schema.
 
