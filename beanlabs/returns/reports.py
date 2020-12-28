@@ -31,11 +31,12 @@ from beancount.core import prices
 from beancount.core.amount import Amount
 from beancount.parser import printer
 
-from config_pb2 import Config
+from config_pb2 import Config, Group
 from investments import AccountData
 from investments import CashFlow
 import investments
 import returns as returnslib
+from returns import Pricer
 
 
 # Basic type aliases.
@@ -122,7 +123,7 @@ def render_table(table: Table,
 Interval = Tuple[str, Date, Date]
 
 
-def compute_returns_table(pricer: returnslib.Pricer,
+def compute_returns_table(pricer: Pricer,
                           target_currency: Currency,
                           account_data: List[AccountData],
                           intervals: List[Interval]):
@@ -154,7 +155,7 @@ def write_returns_pdf(pdf_filename: str, *args, **kwargs) -> subprocess.Popen:
 
 
 def write_returns_html(dirname: str,
-                       pricer: returnslib.Pricer,
+                       pricer: Pricer,
                        account_data: List[AccountData],
                        title: str,
                        end_date: Date,
@@ -224,7 +225,7 @@ def write_returns_html(dirname: str,
 
 
 def write_returns_debugfile(filename: str,
-                            pricer: returnslib.Pricer,
+                            pricer: Pricer,
                             account_data: List[AccountData],
                             title: str,
                             end_date: Date,
@@ -395,7 +396,7 @@ def plot_flows(output_dir: str,
 
 
 def write_price_directives(filename: str,
-                           pricer: returnslib.Pricer,
+                           pricer: Pricer,
                            days_price_threshold: int):
     """Write a list of required price directives as a Beancount file."""
     price_entries = []
@@ -444,16 +445,17 @@ def generate_reports(account_data_map: Dict[Account, AccountData],
                      end_date: Date,
                      output_dir: str,
                      parallel: bool,
-                     pdf: bool) -> returnslib.Pricer:
+                     pdf: bool) -> Pricer:
     """Produce the list of requested reports."""
 
-    pricer = returnslib.Pricer(price_map)
+    pricer = Pricer(price_map)
 
     # Write out a returns file for every account.
     os.makedirs(output_dir, exist_ok=True)
     multiprocessing.set_start_method('fork')
     calls = []
     for report in config.groups.group:
+
         adlist = [account_data_map[name] for name in report.investment]
         assert isinstance(adlist, list)
         assert all(isinstance(ad, AccountData) for ad in adlist)
@@ -488,6 +490,20 @@ def generate_reports(account_data_map: Dict[Account, AccountData],
     return pricer
 
 
+def generate_report_mapper(item: Tuple[Group, List[AccountData]],
+                           price_map: prices.PriceMap,
+                           end_date: Date) -> Tuple[str, bytes]:
+    """A mapper function that can be run from Beam to produce a PDF's bytes."""
+    report, adlist = item
+    with tempfile.NamedTemporaryFile("wb") as tmpfile:
+        pricer = Pricer(price_map)
+        write_returns_pdf(
+            tmpfile.name, pricer, adlist, report.name, end_date, report.currency)
+        tmpfile.flush()
+        with open(tmpfile.name, "rb") as rfile:
+            return (report.name, rfile.read())
+
+
 def generate_price_pages(account_data_map: Dict[Account, AccountData],
                          price_map: prices.PriceMap,
                          output_dir: str):
@@ -495,7 +511,7 @@ def generate_price_pages(account_data_map: Dict[Account, AccountData],
     This should help us debug issues with price recording, in particulawr,
     with respect to stock splits."""
 
-    pricer = returnslib.Pricer(price_map)
+    pricer = Pricer(price_map)
 
     # Write out a returns file for every account.
     os.makedirs(output_dir, exist_ok=True)
