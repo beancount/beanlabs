@@ -17,12 +17,8 @@ import re
 import sys
 import typing
 
-from oauth2client import client
-from oauth2client import tools
-from oauth2client import file
-import httplib2
 from apiclient import discovery
-from apiclient import errors
+import gapis  # See http://github.com/blais/gapis
 
 from dateutil import parser
 
@@ -42,40 +38,6 @@ Sheet = typing.NamedTuple("Sheet", [
     ("docid", str),
     ("id", int),
     ("name", str)])
-
-
-
-def get_credentials(scopes, args) -> Tuple[client.OAuth2Credentials, httplib2.Http]:
-    """Authenticate via oauth2 and cache credentials to a file (or refresh them).
-
-    Args:
-      scopes: A string or a list of strings, the scopes to get credentials for.
-      args: An argparse option values object.
-    Returns:
-      An authenticated http client object.
-    """
-    # Silence annoying error about file_cache version.
-    # See, for example, this: https://github.com/google/google-api-python-client/issues/299
-    logging.getLogger('googleapiclient.discovery_cache').setLevel(logging.ERROR)
-
-    # Location of your secrets file.
-    secrets_filename = os.environ.get('GOOGLE_APIS',
-                                      path.expanduser('~/.google-apis.json'))
-    # Location to store credentials for reuse between invocations.
-    storage_filename = os.environ.get('GOOGLE_STORAGE',
-                                      path.expanduser('~/.google-storage.json'))
-
-    flow = client.flow_from_clientsecrets(secrets_filename, scope=scopes)
-    storage = file.Storage(storage_filename)
-    credentials = storage.get()
-    if not credentials or credentials.invalid:
-        credentials = tools.run_flow(flow, storage, args)
-        storage.put(credentials)
-    http = httplib2.Http()
-    credentials.authorize(http)
-    if credentials.access_token_expired:
-        credentials.refresh(http)
-    return credentials, http
 
 
 def get_sheets(service: discovery.Resource, docid: str) -> List[Sheet]:
@@ -253,7 +215,8 @@ def main():
 
     args = parser.parse_args()
 
-    _, http = get_credentials('https://www.googleapis.com/auth/spreadsheets', args)
+    _, http = gapis.get_credentials('https://www.googleapis.com/auth/spreadsheets',
+                                    'extract-sheets')
     url = 'https://sheets.googleapis.com/$discovery/rest?version=v4'
     service = discovery.build('sheets', 'v4', http=http, discoveryServiceUrl=url)
 
