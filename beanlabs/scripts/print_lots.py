@@ -4,6 +4,7 @@
 If given a size, match that much of the size from the top.
 """
 
+from decimal import Decimal
 import argparse
 
 from beancount import loader
@@ -15,7 +16,7 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__.strip())
     parser.add_argument('filename', help='Beancount ledger filename.')
     parser.add_argument('account', help='Account name.')
-    parser.add_argument('size', nargs='?', type=int,
+    parser.add_argument('size', nargs='?', type=Decimal,
                         help='Size to match at highest cost.')
     args = parser.parse_args()
 
