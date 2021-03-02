@@ -11,6 +11,11 @@ a single CSV file with a prefix column), they have an option to output the
 statement of funds table, but it doesn't contain the stock detail. You want a
 "Flex report", which has joins between the tables, e.g., the statement of funds
 and the trades table.
+
+Note that during the weekends you may not be able to download up to the day's
+date (an error about the report/statement not being ready to download will be
+shown). Simply select a Custom Date Range, and select the last valid market open
+date / business date in order to produce a valid report.
 """
 
 import collections
@@ -28,9 +33,11 @@ from beancount.core import data
 from beancount.core import flags
 from beancount.core import position
 from beancount.core import account as accountlib
-from beancount.ingest.importers.mixins import filing
-from beancount.ingest.importers.mixins import identifier
-from beancount.ingest.importers.mixins import config as configlib
+
+from beangulp import testing
+from beangulp.importers.mixins import filing
+from beangulp.importers.mixins import identifier
+from beangulp.importers.mixins import config as configlib
 
 
 Rows = List[List[str]]
@@ -233,3 +240,15 @@ def create_funds_transfer(row, config) -> data.Balance:
                      None, None, None, None),
     ])
     return txn
+
+
+if __name__ == '__main__':
+    importer = Importer(filing="Assets:US:IBKR:Main", config={
+        'root'        : "Assets:US:IBKR:Main",
+        'asset_cash'  : "Assets:US:IBKR:Main:Cash",
+        'fees'        : "Expenses:Financial:Fees",
+        'commissions' : "Expenses:Financial:Commissions",
+        'transfer'    : "Assets:US:TD:Checking",
+        'interest'    : 'Income:US:IBKR:Interest',
+    })
+    testing.main(importer)
