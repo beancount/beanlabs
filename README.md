@@ -1,4 +1,4 @@
-# Experimental Beancount Projects and Prototypes
+# beanlabs: Experimental Beancount Projects and Prototypes
 
 This repository contains projects and prototypes built on top of the Beancount
 core repository (http://github.com/beancount/beancount). Various tools, ideas,
@@ -15,7 +15,7 @@ nominated as stable, it will move to its own repository.
 ## Mailing-list
 
 Questions related to this code should be sent to the [Beancount
-mailing-list](https://github.com/beancount/beanlabs.git).
+mailing-list](https://groups.google.com/g/beancount).
 
 
 ## History
