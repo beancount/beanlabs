@@ -188,7 +188,7 @@ def create_interest_income(row, config) -> data.Balance:
     return txn
 
 
-@handler(r"(Buy|Sell) ([0-9,\.]+) .*")
+@handler(r"(Buy|Sell) (-?[0-9,\.]+) .*")
 def create_trade(row, config) -> data.Balance:
     """Create proper trading transactions."""
     txn = create_transaction(row)
