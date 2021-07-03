@@ -1,0 +1,50 @@
+#!/usr/bin/env python3
+"""Query the contents of a Python shelve db.
+"""
+
+import shelve
+import logging
+import pprint
+
+import click
+
+
+@click.group()
+@click.argument('dbpath', nargs=1)
+@click.pass_context
+def cli(ctx: click.Context, dbpath: str):
+    "Query the contents of a Python shelve db."
+    logging.basicConfig(level=logging.INFO, format='%(levelname)-8s: %(message)s')
+    db = shelve.open(dbpath, 'r')
+    ctx.obj['db'] = db
+
+
+@cli.command('keys')
+@click.pass_context
+def keys(ctx: click.Context):
+    "Print all the keys"
+    for key in sorted(ctx.obj['db'].keys()):
+        print(key)
+
+
+@cli.command('print')
+@click.pass_context
+def print_(ctx: click.Context):
+    "Print all the values"
+    for key, value in ctx.obj['db'].items():
+        print('{}:\n{}'.format(key, pprint.pformat(value)))
+        print()
+
+
+@cli.command('query')
+@click.pass_context
+@click.argument('key')
+def query(ctx: click.Context, key: str):
+    "Print all the values"
+    db = ctx.obj['db']
+    pprint.pprint(db[key])
+
+
+
+if __name__ == '__main__':
+    cli(obj={})
