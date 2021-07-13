@@ -15,7 +15,7 @@ import click
 def cli(ctx: click.Context, dbpath: str):
     "Query the contents of a Python shelve db."
     logging.basicConfig(level=logging.INFO, format='%(levelname)-8s: %(message)s')
-    db = shelve.open(dbpath, 'r')
+    db = shelve.open(dbpath, 'w')
     ctx.obj['db'] = db
 
 
@@ -44,6 +44,14 @@ def query(ctx: click.Context, key: str):
     db = ctx.obj['db']
     pprint.pprint(db[key])
 
+
+@cli.command('delete')
+@click.pass_context
+@click.argument('key')
+def delete(ctx: click.Context, key: str):
+    "Print all the values"
+    db = ctx.obj['db']
+    db.pop(key)
 
 
 if __name__ == '__main__':
