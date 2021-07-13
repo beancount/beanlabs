@@ -1,0 +1,63 @@
+<html>
+
+<head>
+  <meta charset="utf-8">
+  <title>Chart Viewer</title>
+
+  <script src="static/lightweight-charts.standalone.production.js"></script>
+  <script src="static/jquery-3.6.0.min.js"></script>
+
+  <script type="text/javascript">
+
+  $(document).ready(function() {
+      var parent = $('#chart-div').get(0);
+
+      var chart = LightweightCharts.createChart(parent, {
+          width: parent.offsetWidth,
+          height: parent.offsetHeight,
+  	  timeScale: {timeVisible: true, borderColor: '#D1D4DC'},
+          rightPriceScale: {borderColor: '#D1D4DC'},
+          layout: {backgroundColor: '#000000', textColor: '#A0A0A0'},
+          grid: {horzLines: {color: '#202020'}, vertLines: {color: '#202020'}},
+      });
+
+      var green = '#20A020'
+      var red = '#A02020'
+      var series = chart.addCandlestickSeries({
+ 	  upColor: green,
+ 	  downColor: red,
+ 	  wickUpColor: green,
+ 	  wickDownColor: red,
+ 	  borderVisible: false,
+      });
+      series.setData(data);
+
+      // Make sure to fill the screen.
+      function resize() {
+          chart.applyOptions({ width: $('#chart-div').width(),
+                               height: $('#chart-div').height() })
+      };
+      new ResizeObserver(resize).observe($('#chart-div').get(0));
+  });
+
+  </script>
+
+  <script type="text/javascript">
+DATA
+  </script>
+
+  <style>
+    #chart-div {
+        width: 100%;
+        height: 100%;
+    }
+  </style>
+
+</head>
+
+<body>
+  <div id="chart-div">
+  </div>
+</body>
+
+</html>
