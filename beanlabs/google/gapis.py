@@ -38,6 +38,9 @@ def get_credentials(scopes: List[str],
       A credentials object.
 
     """
+    if not isinstance(scopes, list):
+        raise TypeError(f"Invalid type for scopes: {scopes}")
+
     config_dir = path.expanduser(DEFAULT_CONFIG_DIR)
     if not program_key:
         import __main__  # pylint: disable=import-outside-toplevel

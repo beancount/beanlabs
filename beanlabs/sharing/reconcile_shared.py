@@ -17,18 +17,25 @@ from beancount.core.number import ZERO
 def main():
     parser = argparse.ArgumentParser(description=__doc__.strip())
 
-    parser.add_argument('filename', help='Child ledger filename')
+    parser.add_argument("filename", help="Child ledger filename")
 
-    parser.add_argument('-r', '--ratio', action='store', type=D, default=D('0.6'),
-                        help="Dadpoo to Mompoo ratio.")
+    parser.add_argument(
+        "-r",
+        "--ratio",
+        action="store",
+        type=D,
+        default=D("0.6"),
+        help="Dadpoo to Mompoo ratio.",
+    )
 
     args = parser.parse_args()
 
     entries, errors, options_map = loader.load_file(args.filename)
     price_map = prices.build_price_map(entries)
     balances = {
-        'Income:Dadpoo': inventory.Inventory(),
-        'Income:Mompoo': inventory.Inventory()}
+        "Income:Dadpoo": inventory.Inventory(),
+        "Income:Mompoo": inventory.Inventory(),
+    }
     for entry in data.filter_txns(entries):
         for posting in entry.postings:
             balance = balances.get(posting.account, None)
@@ -36,18 +43,21 @@ def main():
                 balance.add_position(posting)
 
     def get_actual(inv):
-        converted = inv.reduce(convert.convert_position, 'USD', price_map, None)
-        print(converted)
-        return -converted.get_only_position().units.number
+        converted = inv.reduce(convert.convert_position, "USD", price_map, None)
+        return (
+            ZERO
+            if converted.is_empty()
+            else -converted.get_only_position().units.number
+        )
 
-    dad_actual = get_actual(balances['Income:Dadpoo'])
-    mom_actual = get_actual(balances['Income:Mompoo'])
-    #assert dad_actual.currency == mom_actual.currency == 'USD'
+    dad_actual = get_actual(balances["Income:Dadpoo"])
+    mom_actual = get_actual(balances["Income:Mompoo"])
+    # assert dad_actual.currency == mom_actual.currency == 'USD'
     total_amount = dad_actual + mom_actual
     dad_expected = total_amount * args.ratio
     mom_expected = total_amount - dad_expected
-    debtor, creditor = 'Dadpoo', 'Mompoo'
-    diff = abs(dad_expected - dad_actual).quantize(D('0.01'))
+    debtor, creditor = "Dadpoo", "Mompoo"
+    diff = abs(dad_expected - dad_actual).quantize(D("0.01"))
     print("Total contributions:           {:20.2f}".format(total_amount))
     print()
     print("Dadpoo expected contribution:  {:20.2f}".format(dad_expected))
@@ -61,5 +71,5 @@ def main():
     print("{} OWES {}: {:10.2f}".format(debtor, creditor, diff))
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

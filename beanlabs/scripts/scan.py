@@ -5,10 +5,7 @@ This is an example related to
 https://groups.google.com/d/msgid/beancount/20211127101046.tw5yy4x6b4ooxvmp%40upsilon.cc
 """
 
-from beancount import loader
-from beancount.core import data
-from beancount.core.data import Account
-from beancount.core.inventory import Inventory
+import beancount as bn
 
 import argparse
 import collections
@@ -22,7 +19,9 @@ def gen_dates(entries, num_periods) -> List[datetime.date]:
     """Generate 'num_periods' dates over entries."""
 
     min_date, max_date = datetime.date(3000, 1, 1), datetime.date(1970, 1, 1)
-    for entry in data.filter_txns(entries):
+    for entry in entries:
+        if not isinstance(entry, bn.dtypes.Transaction):
+            continue
         if entry.date < min_date:
             min_date = entry.date
         if entry.date > max_date:
@@ -36,19 +35,21 @@ def gen_dates(entries, num_periods) -> List[datetime.date]:
 
 
 def scan(
-        entries: data.Entries,
+        entries: bn.Directives,
         dates: List[datetime.date],
-        accounts_filter: Optional[Callable[[Account], bool]] = None
-) -> Iterator[Tuple[datetime.date, Dict[Account, Inventory]]]:
+        accounts_filter: Optional[Callable[[bn.Account], bool]] = None
+) -> Iterator[Tuple[datetime.date, Dict[bn.Account, bn.Inventory]]]:
     """Scan through 'entries' yielding a dict of balances at the given dates."""
 
     if not entries:
         return
 
-    balances = collections.defaultdict(Inventory)
+    balances = collections.defaultdict(bn.Inventory)
     date_iter = iter(dates)
     next_date = next(date_iter)
-    for entry in data.filter_txns(entries):
+    for entry in entries:
+        if not isinstance(entry, bn.dtypes.Transaction):
+            continue
         if entry.date >= next_date:
             clean_dict = {account: inv
                           for account, inv in balances.items()
@@ -73,7 +74,7 @@ def main():
 
     args = parser.parse_args()
 
-    entries, errors, options_map = loader.load_file(args.filename)
+    entries, errors, options_map = bn.load_file(args.filename)
 
     dates = gen_dates(entries, args.num_periods)
     for date, balances in scan(entries, dates, lambda a: a.startswith('Asset')):
