@@ -17,6 +17,11 @@ import re
 import sys
 from os import path
 
+import petl
+petl.config.look_style = 'minimal'
+petl.config.failonerror = True
+
+
 from beancount.core.number import D
 from beancount.core.number import ZERO
 from beancount.core import data
@@ -132,7 +137,7 @@ def expand_sales_legs(entries, account, start, end, calculate_commission):
                 # Set the cost on the posting from the reduced position.
                 # FIXME: Eventually that'll happen automatically during the full
                 # booking stage.
-                if booking == inventory.Booking.REDUCED:
+                if booking == inventory.MatchResult.REDUCED:
                     posting = posting._replace(cost=reduced_position.cost)
 
                 # If the postings don't have a reference number, ignore them.
