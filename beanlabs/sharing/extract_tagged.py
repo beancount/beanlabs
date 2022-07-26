@@ -62,6 +62,9 @@ def main():
     parser.add_argument('inflows_account', action='store',
                         help="Inflows account to use for the rewritten transactions")
 
+    parser.add_argument('match_account', action='store',
+                        help="Explicit account to match against")
+
     parser.add_argument('-t', '--translate', action='append',
                         help=("Explicit account translations. This can be used to make "
                               "transfers be treated specially."))
@@ -71,10 +74,9 @@ def main():
     entries, _, options_map = loader.load_file(args.filename)
     imported_entries = []
     tag = args.tag.lstrip('#')
-    match_account = 'Expenses:Kai'  # FIXME: Make this an option.
     for entry in data.filter_txns(entries):
         if tag in entry.tags:
-            entry = adjust_entry(entry, match_account, args.inflows_account, args.tag,
+            entry = adjust_entry(entry, args.match_account, args.inflows_account, args.tag,
                                  translate_map)
             imported_entries.append(entry)
 
