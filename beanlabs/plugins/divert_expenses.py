@@ -36,7 +36,7 @@ from beancount.core import account_types
 from beancount.parser import options
 
 
-__plugins__ = ('divert_expenses',)
+__plugins__ = ("divert_expenses",)
 
 
 def divert_expenses(entries, options_map, config_str):
@@ -55,19 +55,24 @@ def divert_expenses(entries, options_map, config_str):
       A modified list of entries.
     """
     # pylint: disable=eval-used
-    config_obj = eval(config_str, {}, {})
-    if not isinstance(config_obj, dict):
+    config_list = eval(config_str, {}, {})
+    if not isinstance(config_list, list):
         raise RuntimeError("Invalid plugin configuration: should be a single dict.")
-    tag = config_obj['tag']
-    replacement_account = config_obj['account']
+    config_dict = {cfg["tag"]: cfg["account"] for cfg in config_list}
+    tags = frozenset(config_dict.keys())
 
     acctypes = options.get_account_types(options_map)
 
     new_entries = []
     errors = []
     for entry in entries:
-        if isinstance(entry, Transaction) and tag in entry.tags:
-            entry = replace_diverted_accounts(entry, replacement_account, acctypes)
+        if isinstance(entry, Transaction):
+            overlapping = tags & entry.tags
+            if overlapping:
+                for tag in overlapping:
+                    entry = replace_diverted_accounts(
+                        entry, config_dict[tag], acctypes
+                    )
         new_entries.append(entry)
 
     return new_entries, errors
@@ -85,11 +90,13 @@ def replace_diverted_accounts(entry, replacement_account, acctypes):
     """
     new_postings = []
     for posting in entry.postings:
-        divert = posting.meta.get('divert', None) if posting.meta else None
-        if (divert is True or (
-                divert is None and
-                account_types.is_account_type(acctypes.expenses, posting.account))):
-            posting = posting._replace(account=replacement_account,
-                                       meta={'diverted_account': posting.account})
+        divert = posting.meta.get("divert", None) if posting.meta else None
+        if divert is True or (
+            divert is None
+            and account_types.is_account_type(acctypes.expenses, posting.account)
+        ):
+            posting = posting._replace(
+                account=replacement_account, meta={"diverted_account": posting.account}
+            )
         new_postings.append(posting)
     return entry._replace(postings=new_postings)
