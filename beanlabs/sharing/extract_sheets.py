@@ -297,6 +297,7 @@ def main():
         if entry is not None:
             entries.append(entry)
 
+    entries = data.sorted(entries)
     if args.tag:
         print("pushtag #{}".format(args.tag))
         print()
