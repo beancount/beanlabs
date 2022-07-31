@@ -51,10 +51,10 @@ from beancount.core import amount
 from beancount.core import inventory
 
 
-__plugins__ = ('remove_commissions',)
+__plugins__ = ("remove_commissions",)
 
 
-Error = collections.namedtuple('Error', 'source message entry')
+Error = collections.namedtuple("Error", "source message entry")
 
 
 def parse_config(config):
@@ -68,36 +68,40 @@ def parse_config(config):
       ValueError: If the input string is invalid.
     """
     try:
-        commission_str, income_str, outgoing_account = config.split()
+        commissions_str, fees_str, income_str, outgoing_account = config.split()
         income_regexp = re.compile(income_str)
-        commission_regexp = re.compile(commission_str)
+        commissions_fees_regexp = re.compile(r"{}|{}".format(commissions_str, fees_str))
     except (ValueError, re.error) as exc:
         raise ValueError(exc)
-    return commission_regexp, income_regexp, outgoing_account
+    return commissions_fees_regexp, income_regexp, outgoing_account
 
 
 def remove_commissions(entries, unused_options_map, config):
     """Remove the commissions from the P/L of closing/sales transactions."""
 
     try:
-        commission_regexp, income_regexp, outgoing_account = parse_config(config)
+        commissions_fees_regexp, income_regexp, outgoing_account = parse_config(config)
     except ValueError:
         return [], [
-            Error(None, "Invalid configuration for {} plugin".format(__file__), None)]
+            Error(None, "Invalid configuration for {} plugin".format(__file__), None)
+        ]
 
     new_entries = []
     for entry in entries:
         # Match the transaction.
-        if (isinstance(entry, data.Transaction) and
-            any(income_regexp.match(posting.account)
-                for posting in entry.postings) and
-            any(commission_regexp.match(posting.account)
-                for posting in entry.postings)):
+        if (
+            isinstance(entry, data.Transaction)
+            and any(income_regexp.match(posting.account) for posting in entry.postings)
+            and any(
+                commissions_fees_regexp.match(posting.account)
+                for posting in entry.postings
+            )
+        ):
 
             # Find the commissions amounts.
             commissions = inventory.Inventory()
             for posting in entry.postings:
-                if commission_regexp.match(posting.account):
+                if commissions_fees_regexp.match(posting.account):
                     commissions.add_amount(posting.units)
 
             # Find the first income account.
@@ -110,10 +114,16 @@ def remove_commissions(entries, unused_options_map, config):
             # Insert the new legs.
             new_postings = []
             for cposition in commissions:
-                new_postings.extend([
-                    data.Posting(income_account, cposition.units, None, None, None, None),
-                    data.Posting(outgoing_account, -cposition.units, None, None, None, None),
-                    ])
+                new_postings.extend(
+                    [
+                        data.Posting(
+                            income_account, cposition.units, None, None, None, None
+                        ),
+                        data.Posting(
+                            outgoing_account, -cposition.units, None, None, None, None
+                        ),
+                    ]
+                )
 
                 # Distribute the commission.
                 distribute_commission_on_metadata(cposition.units, entry.postings)
@@ -137,13 +147,11 @@ def distribute_commission_on_metadata(commission, postings):
     trade_postings = []
     for posting in postings:
         if posting.cost is not None:
-            cost = (posting.price.number
-                    if posting.price else
-                    posting.cost.number)
+            cost = posting.price.number if posting.price else posting.cost.number
             trade_postings.append((posting, posting.units.number * cost))
     total = sum(cost for _, cost in trade_postings)
     for posting, cost in trade_postings:
-        if 'commission' not in posting.meta:
-            posting.meta['commission'] = inventory.Inventory()
+        if "commission" not in posting.meta:
+            posting.meta["commission"] = inventory.Inventory()
         posting_commission = amount.mul(commission, (cost / total))
-        posting.meta['commission'].add_amount(posting_commission)
+        posting.meta["commission"].add_amount(posting_commission)
