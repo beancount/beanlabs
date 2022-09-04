@@ -26,6 +26,7 @@ to accounts with a component by their name.
 __copyright__ = "Copyright (C) 2015-2016  Martin Blais"
 __license__ = "GNU GPLv2"
 
+from decimal import Decimal
 from os import path
 import argparse
 import logging
@@ -61,16 +62,7 @@ def split_expenses(entries, options_map, config):
       postings with smaller amounts.
     """
 
-    # Validate and sanitize configuration.
-    if isinstance(config, str):
-        members = config.split()
-    elif isinstance(config, (tuple, list)):
-        members = config
-    else:
-        raise RuntimeError(
-            "Invalid plugin configuration: configuration for split_expenses "
-            "should be a string or a sequence."
-        )
+    members = parse_config(config)
 
     acctypes = options.get_account_types(options_map)
 
@@ -95,11 +87,11 @@ def split_expenses(entries, options_map, config):
                 ):
 
                     # Split this posting into multiple postings.
-                    split_units = amount.Amount(
-                        posting.units.number / len(members), posting.units.currency
-                    )
+                    for member, fraction in members.items():
+                        split_units = amount.Amount(
+                            posting.units.number * fraction, posting.units.currency
+                        )
 
-                    for member in members:
                         # Mark the account as new if never seen before.
                         subaccount = account.join(posting.account, member)
                         new_accounts.add(subaccount)
@@ -151,7 +143,7 @@ def save_query(
     *format_args,
     boxed=True,
     spaced=False,
-    args=None
+    args=None,
 ):
     """Save the multiple files for this query.
 
@@ -180,9 +172,7 @@ def save_query(
     """
     # Replace CONV() to convert the currencies or not; if so, replace to
     # CONVERT(..., currency).
-    replacement = (
-        r"\1" if args.currency is None else rf'CONVERT(\1, "{args.currency}")'
-    )
+    replacement = r"\1" if args.currency is None else rf'CONVERT(\1, "{args.currency}")'
     sql_query = re.sub(r"CONV\[(.*?)\]", replacement, sql_query)
 
     # Run the query.
@@ -228,6 +218,23 @@ def save_query(
         )
 
 
+def parse_config(config_str):
+    """Validate and sanitize configuration."""
+    if not isinstance(config_str, str):
+        raise RuntimeError(
+            "Invalid plugin configuration: configuration for split_expenses "
+            "should be a string or a sequence."
+        )
+    if re.fullmatch(r"[A-Za-z ]+", config_str):
+        members = config_str.split()
+    else:
+        members = eval(config_str)
+    if isinstance(members, list):
+        fraction = 1 / len(members)
+        members = {member: fraction for member in members}
+    return {member: Decimal(f) for member, f in members.items()}
+
+
 def get_participants(options_map):
     """Get the list of participants from the plugin configuration in the input file.
 
@@ -242,7 +249,7 @@ def get_participants(options_map):
     """
     plugin_options = dict(options_map["plugin"])
     try:
-        return plugin_options["beanlabs.sharing.split_expenses"].split()
+        return parse_config(plugin_options["beanlabs.sharing.split_expenses"])
     except KeyError as exc:
         raise KeyError(
             "Could not find the split_expenses plugin configuration."
