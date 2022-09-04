@@ -74,8 +74,8 @@ def split_expenses(entries, options_map, config):
 
     acctypes = options.get_account_types(options_map)
 
-    def is_expense_account(account):
-        return account_types.get_account_type(account) == acctypes.expenses
+    def is_expense_account(acc):
+        return account_types.get_account_type(acc) == acctypes.expenses
 
     # A predicate to quickly identify if an account contains the name of a
     # member.
@@ -181,7 +181,7 @@ def save_query(
     # Replace CONV() to convert the currencies or not; if so, replace to
     # CONVERT(..., currency).
     replacement = (
-        r"\1" if args.currency is None else r'CONVERT(\1, "{}")'.format(args.currency)
+        r"\1" if args.currency is None else rf'CONVERT(\1, "{args.currency}")'
     )
     sql_query = re.sub(r"CONV\[(.*?)\]", replacement, sql_query)
 
@@ -228,7 +228,7 @@ def save_query(
         )
 
 
-def get_participants(filename, options_map):
+def get_participants(options_map):
     """Get the list of participants from the plugin configuration in the input file.
 
     Args:
@@ -296,11 +296,11 @@ def main():
             os.makedirs(directory, exist_ok=True)
 
     # Load the input file and get the list of participants.
-    entries, errors, options_map = loader.load_file(args.filename)
-    participants = get_participants(args.filename, options_map)
+    entries, _, options_map = loader.load_file(args.filename)
+    participants = get_participants(options_map)
 
     for participant in participants:
-        print("Participant: {}".format(participant))
+        print(f"Participant: {participant}")
 
         save_query(
             "balances",
