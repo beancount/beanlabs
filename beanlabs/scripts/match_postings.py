@@ -1,36 +1,36 @@
 #!/usr/bin/env python3
-"""Given two ledgers and account regexps, match up postings from each.
+"""Given ledgers and account regexps, match postings of the first to the second.
 
-This essentially creates a cross-referencing matching between two subsets of
-postings. This can be used to match up transactions between a personal ledger
-and a project/trip ledger, where transactions are intended to be replicated
-manually.
+This essentially creates a cross-referencing matching between the subset of
+postings of the left file into the subset of postings of the second. This can be
+used to match up transactions between a project or trip ledger to transactions
+from a personal ledger.
 
-For example, in one's personal ledger file, an expense related to a trip might
-show up like this:
-
-  2016-06-15 * "HERTZ CAR RENTAL    800-654-417" ^753c63a9d5d9
-    Liabilities:US:Sapphire        -393.13 USD
-    Assets:Travel:Pending:France
-
-While in the common trip file, the corresponding income may show up something
-like this:
+For example, in a trip ledger, an income contribution may look like this:
 
   2016-06-15 * "Hertz" "Rental Car" ^753c63a9d5d9
     Expenses:Transportation:Car-Rental    393.13 USD
     Income:Martin:CreditCard
 
-At the end of the trip, before reconciling the income and expenses, one has to
-make sure that each person's personal expenses have been replicated as income
-postings in the shared common file. This is what this script does.
+Whereas in one's personal ledger file, the corresponding expense might show up
+like this:
+
+  2016-06-15 * "HERTZ CAR RENTAL    800-654-417" ^753c63a9d5d9
+    Liabilities:US:Sapphire        -393.13 USD
+    Assets:Travel:Pending:France
+
+This scripts make it possible to verify that all the transactions from the first
+appear into the second.
 """
-__copyright__ = "Copyright (C) 2016  Martin Blais"
+__copyright__ = "Copyright (C) 2016-2022  Martin Blais"
 __license__ = "GNU GPLv2"
 
 import re
 import collections
 import itertools
 import pprint
+
+import dateutil.parser
 
 from beancount.parser import printer
 from beancount.core import amount
@@ -113,6 +113,10 @@ def print_unmatched(txn_postings, filename, regexp):
         printer.print_entry(txn_posting.txn)
 
 
+def parse_date(string):
+    return dateutil.parser.parse(string).date()
+
+
 def main():
     import argparse, logging
 
@@ -125,11 +129,17 @@ def main():
     )
     parser.add_argument("filename_rght", help="Right filename")
     parser.add_argument("regexp_rght", help="Right account regexp")
+    parser.add_argument('-d', '--min-date', action='store', type=parse_date,
+                        help="Minimum date to consider in the postings.")
     args = parser.parse_args()
 
     left_postings = get_postings(args.filename_left, args.regexp_left, args.tag_left)
     rght_postings = get_postings(args.filename_rght, args.regexp_rght)
     # print(len(left_postings), len(rght_postings))
+
+    if args.min_date:
+        left_postings = [tp for tp in left_postings if tp.txn.date >= args.min_date]
+        rght_postings = [tp for tp in rght_postings if tp.txn.date >= args.min_date]
 
     # Progressively try different unique keys to match up postings to each other
     # unambiguously.
@@ -138,11 +148,16 @@ def main():
             left_postings, rght_postings, keyfun
         )
 
-    print(
-        "Unmatched: {} left & {} right".format(len(left_postings), len(rght_postings))
-    )
-    print_unmatched(left_postings, args.filename_left, args.regexp_left)
-    print_unmatched(rght_postings, args.filename_rght, args.regexp_rght)
+    if len(left_postings):
+        print(
+            "Unmatched from left: {} postings".format(len(left_postings))
+        )
+        print_unmatched(left_postings, args.filename_left, args.regexp_left)
+    if len(rght_postings):
+        print(
+            "Unmatched from right: {} postings".format(len(rght_postings))
+        )
+        print_unmatched(rght_postings, args.filename_rght, args.regexp_rght)
 
 
 if __name__ == "__main__":
