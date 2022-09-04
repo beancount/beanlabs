@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""Given two ledgers and account regexps, match up the postings of each.
+"""Given two ledgers and account regexps, match up postings from each.
 
-This can be used to match up transactions between a personal ledger and a
-project/trip ledger, where transactions are intended to be replicated manually.
+This essentially creates a cross-referencing matching between two subsets of
+postings. This can be used to match up transactions between a personal ledger
+and a project/trip ledger, where transactions are intended to be replicated
+manually.
 
 For example, in one's personal ledger file, an expense related to a trip might
 show up like this:
