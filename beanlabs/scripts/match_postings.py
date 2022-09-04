@@ -41,17 +41,18 @@ from beancount import loader
 def get_postings(filename, account_regexp, tag=None):
     if tag:
         match = lambda entry, posting: (
-            re.match(account_regexp, posting.account) and
-            tag in entry.tags)
+            re.match(account_regexp, posting.account) and tag in entry.tags
+        )
     else:
-        match = lambda _, posting: (
-            re.match(account_regexp, posting.account))
+        match = lambda _, posting: (re.match(account_regexp, posting.account))
 
     entries, _, _ = loader.load_file(filename)
-    txn_postings = [data.TxnPosting(entry, posting)
-                    for entry in data.filter_txns(entries)
-                    for posting in entry.postings
-                    if match(entry, posting)]
+    txn_postings = [
+        data.TxnPosting(entry, posting)
+        for entry in data.filter_txns(entries)
+        for posting in entry.postings
+        if match(entry, posting)
+    ]
     return txn_postings
 
 
@@ -77,15 +78,24 @@ def match_postings(left_postings, rght_postings, keyfun):
         del left_map[units]
         del rght_map[units]
 
-        meta = {"left": left_postings[0].txn.narration,
-                "rght": rght_postings[0].txn.narration}
+        meta = {
+            "left": left_postings[0].txn.narration,
+            "rght": rght_postings[0].txn.narration,
+        }
         txn = data.Transaction(
-            meta, left_postings[0].txn.date, '*', None, "", None, None, [
+            meta,
+            left_postings[0].txn.date,
+            "*",
+            None,
+            "",
+            None,
+            None,
+            [
                 left_postings[0].posting,
                 rght_postings[0].posting,
-            ]
+            ],
         )
-        #printer.print_entry(txn)
+        # printer.print_entry(txn)
 
     left_remain = list(itertools.chain.from_iterable(left_map.values()))
     rght_remain = list(itertools.chain.from_iterable(rght_map.values()))
@@ -105,31 +115,35 @@ def print_unmatched(txn_postings, filename, regexp):
 
 def main():
     import argparse, logging
-    logging.basicConfig(level=logging.INFO, format='%(levelname)-8s: %(message)s')
+
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-8s: %(message)s")
     parser = argparse.ArgumentParser(description=__doc__.strip())
-    parser.add_argument('filename_left', help='Left filename')
-    parser.add_argument('regexp_left', help='Left account regexp')
-    parser.add_argument('--tag', dest='tag_left',
-                        help='Tag to filter left file (optional)')
-    parser.add_argument('filename_rght', help='Right filename')
-    parser.add_argument('regexp_rght', help='Right account regexp')
+    parser.add_argument("filename_left", help="Left filename")
+    parser.add_argument("regexp_left", help="Left account regexp")
+    parser.add_argument(
+        "--tag", dest="tag_left", help="Tag to filter left file (optional)"
+    )
+    parser.add_argument("filename_rght", help="Right filename")
+    parser.add_argument("regexp_rght", help="Right account regexp")
     args = parser.parse_args()
 
     left_postings = get_postings(args.filename_left, args.regexp_left, args.tag_left)
     rght_postings = get_postings(args.filename_rght, args.regexp_rght)
-    #print(len(left_postings), len(rght_postings))
+    # print(len(left_postings), len(rght_postings))
 
     # Progressively try different unique keys to match up postings to each other
     # unambiguously.
-    for keyfun in [lambda tp: amount.abs(tp.posting.units),
-                lambda tp: tp.txn.links]:
-        _, (left_postings, rght_postings) = (
-            match_postings(left_postings, rght_postings, keyfun))
+    for keyfun in [lambda tp: amount.abs(tp.posting.units), lambda tp: tp.txn.links]:
+        _, (left_postings, rght_postings) = match_postings(
+            left_postings, rght_postings, keyfun
+        )
 
-    print("Unmatched: {} left & {} right".format(len(left_postings), len(rght_postings)))
+    print(
+        "Unmatched: {} left & {} right".format(len(left_postings), len(rght_postings))
+    )
     print_unmatched(left_postings, args.filename_left, args.regexp_left)
     print_unmatched(rght_postings, args.filename_rght, args.regexp_rght)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()
