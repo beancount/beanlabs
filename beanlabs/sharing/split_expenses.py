@@ -27,6 +27,7 @@ __copyright__ = "Copyright (C) 2015-2016  Martin Blais"
 __license__ = "GNU GPLv2"
 
 from os import path
+import argparse
 import logging
 import os
 import re
@@ -40,7 +41,6 @@ from beancount.core import data
 from beancount.core import getters
 from beancount.core import interpolate
 from beancount.parser import options
-from beancount.parser import version
 
 from beanquery import query
 from beanquery import query_render
@@ -221,7 +221,7 @@ def get_participants(filename, options_map):
     """
     plugin_options = dict(options_map["plugin"])
     try:
-        return plugin_options["experiments.sharing.split_expenses"].split()
+        return plugin_options["beanlabs.sharing.split_expenses"].split()
     except KeyError as exc:
         raise KeyError("Could not find the split_expenses plugin configuration.") from exc
 
@@ -236,7 +236,7 @@ def main():
     """
 
     logging.basicConfig(level=logging.INFO, format='%(levelname)-8s: %(message)s')
-    parser = version.ArgumentParser(description=__doc__.strip())
+    parser = argparse.ArgumentParser(description=__doc__.strip())
     parser.add_argument('filename', help='Beancount input filename')
 
     parser.add_argument('-c', '--currency', action='store',
