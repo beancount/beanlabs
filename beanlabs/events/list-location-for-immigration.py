@@ -78,6 +78,7 @@ def main():
           "work backwards.")
     with open(args.detail, 'w') as file:
         wr = csv.writer(file)
+        wr.writerow("date_left,date_returned,six_months,countries,days_outside".split(","))
         total_days_ = 0
         for trip in reversed(trips):
             date_left = trip[0].date

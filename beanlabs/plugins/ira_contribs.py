@@ -167,7 +167,8 @@ def add_ira_contribs(entries, options_map, config_str):
                             amount.Amount(abs(posting.units.number), currency),
                             neg_account.format(year=entry.date.year),
                             pos_account.format(year=entry.date.year),
-                            insert_flag)
+                            insert_flag,
+                            posting.meta)
 
             if DEBUG and orig_entry is not entry:
                 printer.print_entry(orig_entry)
@@ -178,7 +179,7 @@ def add_ira_contribs(entries, options_map, config_str):
     return new_entries, []
 
 
-def add_postings(entry, amount_, neg_account, pos_account, flag):
+def add_postings(entry, amount_, neg_account, pos_account, flag, meta):
     """Insert positive and negative postings of a position in an entry.
 
     Args:
@@ -191,6 +192,6 @@ def add_postings(entry, amount_, neg_account, pos_account, flag):
       A new, modified entry.
     """
     return entry._replace(postings=entry.postings + [
-        data.Posting(neg_account, -amount_, None, None, flag, None),
-        data.Posting(pos_account, amount_, None, None, flag, None),
+        data.Posting(neg_account, -amount_, None, None, flag, meta),
+        data.Posting(pos_account, amount_, None, None, flag, meta),
         ])
