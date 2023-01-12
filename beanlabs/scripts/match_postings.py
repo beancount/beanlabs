@@ -131,6 +131,8 @@ def main():
     parser.add_argument("regexp_rght", help="Right account regexp")
     parser.add_argument('-d', '--min-date', action='store', type=parse_date,
                         help="Minimum date to consider in the postings.")
+    parser.add_argument('-v', '--verbose', action='store_true',
+                        help="Verbose output, print out matched transactions.")
     args = parser.parse_args()
 
     left_postings = get_postings(args.filename_left, args.regexp_left, args.tag_left)
@@ -144,15 +146,22 @@ def main():
     # Progressively try different unique keys to match up postings to each other
     # unambiguously.
     for keyfun in [lambda tp: amount.abs(tp.posting.units), lambda tp: tp.txn.links]:
-        _, (left_postings, rght_postings) = match_postings(
+        matched, (left_postings, rght_postings) = match_postings(
             left_postings, rght_postings, keyfun
         )
+        if args.verbose:
+            print()
+            print()
+            print('=== Matched')
+            print()
+            printer.print_entries(matched)
 
     if len(left_postings):
         print(
             "Unmatched from left: {} postings".format(len(left_postings))
         )
         print_unmatched(left_postings, args.filename_left, args.regexp_left)
+
     if len(rght_postings):
         print(
             "Unmatched from right: {} postings".format(len(rght_postings))
