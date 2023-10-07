@@ -5,10 +5,14 @@ This script reads a Beancount file, extracts all transactions with a tag, and
 rewrites them to convert its inflows to a single account.
 """
 
+# TODO(blais): Turn the ability to read or write a spreadsheet to/from a petl dataframe into a library from this code.
+
+from decimal import Decimal
 from os import path
 from typing import Dict, List, Tuple, Generator, Optional, Any
 import argparse
 import collections
+import contextlib
 import datetime
 import enum
 import logging
@@ -18,9 +22,10 @@ import re
 import sys
 import typing
 
+import petl
 from apiclient import discovery
 import gapis  # See http://github.com/blais/gapis
-from dateutil import parser
+import dateutil.parser
 
 from beancount import loader
 from beancount.core.number import D
@@ -34,12 +39,21 @@ from beancount.parser import printer
 from beanlabs.google import sheets_upload
 
 
-class Col(enum.Enum):
-    ACCOUNT = "ACCOUNT"
-    AMOUNT = "AMOUNT"
-    DATE = "DATE"
-    NARRATION = "NARRATION"
-    PAYEE = "PAYEE"
+petl.config.look_style = "minimal"
+petl.config.failonerror = True
+
+
+@contextlib.contextmanager
+def tag(tagname: Optional[str]):
+    if tagname:
+        print("pushtag #{}".format(tagname))
+        print()
+    try:
+        yield
+    finally:
+        if tagname:
+            print()
+            print("poptag #{}".format(tagname))
 
 
 Sheet = typing.NamedTuple("Sheet", [("docid", str), ("id", int), ("name", str)])
@@ -103,83 +117,23 @@ def iter_sheet(
         yield row
 
 
-def parse_date(string: str) -> Optional[datetime.date]:
-    "Parse a date string, if possible."
-    try:
-        return parser.parse(string).date()
-    except ValueError:
-        pass
+def find_unique_column(table: petl.Table, simple_name: str) -> str:
+    """Find the column for a date."""
+    fieldnames = table.fieldnames()
+    matching = [
+        field for field in fieldnames if re.search(rf"\b{simple_name}\b", field, re.I)
+    ]
+    if len(matching) != 1:
+        raise ValueError(f"Could not find unique field for {simple_name}.")
+    return matching[0]
 
 
-def list_get(elemlist, index, default=None):
-    try:
-        return elemlist[index]
-    except IndexError:
-        return default
-
-
-def infer_columns(rows: List[str], num_rows: int = 16) -> Dict[int, int]:
-    "Infer the column types of a spreadsheet."
-    header = rows[0]
-    head = rows[1:num_rows]
-    coltypes = []
-    coltypes_inferred = []
-    for colindex in range(len(header)):
-        colheader = header[colindex]
-        coltype = None
-        if re.match(r".*\bdate\b", colheader, re.I):
-            coltype = Col.DATE
-        elif re.match(r".*\b(payee|provider)\b", colheader, re.I):
-            coltype = Col.PAYEE
-        elif re.match(r".*\b(narration|description)\b", colheader, re.I):
-            coltype = Col.NARRATION
-        elif re.match(r".*\b(account|category)\b", colheader, re.I):
-            coltype = Col.ACCOUNT
-        elif re.match(r".*\bamount\b", colheader, re.I):
-            coltype = Col.AMOUNT
-        coltypes.append(coltype)
-
-        coltype = None
-        column = [list_get(row, colindex) for row in head]
-        if coltype is None:
-            if all(isinstance(value, datetime.date) for value in column):
-                coltype = Col.DATE
-            elif all(
-                re.match(r"\$?[0-9,]+(\.[0-9]+)", value) is not None
-                for value in column
-                if value is not None
-            ):
-                coltype = Col.AMOUNT
-            elif all(
-                re.match(account.ACCOUNT_RE, value) is not None
-                for value in column
-                if value is not None
-            ):
-                coltype = Col.ACCOUNT
-        coltypes_inferred.append(coltype)
-
-    coltypemap = {}
-    for coltype in [
-        Col.DATE,
-        Col.PAYEE,
-        Col.NARRATION,
-        Col.ACCOUNT,
-        Col.AMOUNT,
-    ]:
-        try:
-            coltypemap[coltype] = coltypes.index(coltype)
-        except IndexError:
-            try:
-                coltypemap[coltype] = coltypes_inferred.index(coltype)
-            except IndexError:
-                pass
-
-    return coltypemap
+def parse_number(string: str) -> Decimal:
+    return Decimal(string.replace("$", "").replace(",", ""))
 
 
 def create_entry(
-    row: List[str],
-    coltypes: Dict[int, int],
+    row: petl.Record,
     inflows_account: str,
     currency: str,
     docid: str,
@@ -187,31 +141,13 @@ def create_entry(
     default_account: str = "Expenses:Uncategorized",
 ):
     "Create a new entry based on the row contents and inferred types."
-    date = parse_date(list_get(row, coltypes[Col.DATE], ""))
-    number_orig_str = list_get(row, coltypes[Col.AMOUNT], "")
-    number_str = number_orig_str.strip("$ ")
-    if not date:
-        logging.error("Invalid row: {r}", row)
-        return
-    try:
-        number = D(number_str) if number_str and number_str != "?" else ZERO
-    except ValueError as exc:
-        raise ValueError("{} (for {})".format(exc, number_str))
-    if not number_str:
-        logging.warning("Zero amount: %s", row)
-
-    account = default_account
-    if coltypes.get(Col.ACCOUNT):
-        account = row[coltypes.get(Col.ACCOUNT)] or account
-
-    payee = None
-    if coltypes.get(Col.PAYEE):
-        payee = row[coltypes.get(Col.PAYEE)]
-    narration = None
-    if coltypes.get(Col.NARRATION):
-        narration = row[coltypes.get(Col.NARRATION)]
-
-    postings = []
+    date = row["date"]
+    number = row["amount"]
+    units = amount.Amount(number, "USD")
+    account = row.get("account", default_account)
+    payee = row.get("payee", None)
+    narration = row.get("narration", None)
+    pflag = flags.FLAG_WARNING if account == default_account else None
     txn = data.Transaction(
         data.new_metadata(docid, index),
         date,
@@ -220,11 +156,11 @@ def create_entry(
         narration,
         data.EMPTY_SET,
         data.EMPTY_SET,
-        postings,
+        [
+            data.Posting(account, units, None, None, pflag, None),
+            data.Posting(inflows_account, -units, None, None, None, None),
+        ],
     )
-    units = amount.Amount(number, "USD")
-    postings.append(data.Posting(account, units, None, None, None, None))
-    postings.append(data.Posting(inflows_account, -units, None, None, None, None))
     return txn
 
 
@@ -265,6 +201,12 @@ def main():
         "-t", "--tag", action="store", help="Tag all entries with the given tag string"
     )
 
+    parser.add_argument(
+        "--scope",
+        action="store",
+        help="Filter by Scope column value",
+    )
+
     args = parser.parse_args()
 
     scope = ["https://www.googleapis.com/auth/spreadsheets"]
@@ -277,17 +219,39 @@ def main():
 
     # Read contents and categorize them.
     rows = list(iter_sheet(service, sheet))
-    coltypes = infer_columns(rows)
+    # coltypes = infer_columns(rows)
+    table = petl.wrap(list(iter_sheet(service, sheet)))
 
-    rowiter = iter(rows)
-    next(rowiter)
+    # Map field names.
+    colmap = {
+        "date": find_unique_column(table, "(date)"),
+        "account": find_unique_column(table, "(category|account)"),
+        "payee": find_unique_column(table, "(payee|provider)"),
+        "narration": find_unique_column(table, "(narration|description)"),
+        "amount": find_unique_column(table, "(amount)"),
+    }
+    if args.scope:
+        colmap.update({"scope": find_unique_column(table, "(scope)")})
+
+    # Select and rename fields, convert types.
+    table = (
+        table.cut(list(colmap.values()))
+        .rename({value: key for (key, value) in colmap.items()})
+        .convert("date", lambda v: dateutil.parser.parse(v).date())
+        .convert("amount", parse_number)
+    )
+
+    if args.scope:
+        index = [name.lower() for name in table.fieldnames()].index("scope")
+        if index == -1:
+            raise ValueError("Scope field not found in sheet.")
+        field = table.fieldnames()[index]
+        table = table.selecteq(field, args.scope)
+
     entries = []
-    for index, row in enumerate(rowiter):
-        if not list(filter(None, row)):
-            continue
+    for index, row in enumerate(table.records()):
         entry = create_entry(
             row,
-            coltypes,
             args.inflows_account,
             "USD",
             args.docid,
@@ -298,13 +262,8 @@ def main():
             entries.append(entry)
 
     entries = data.sorted(entries)
-    if args.tag:
-        print("pushtag #{}".format(args.tag))
-        print()
-    printer.print_entries(entries, file=sys.stdout)
-    if args.tag:
-        print()
-        print("poptag #{}".format(args.tag))
+    with tag(args.tag):
+        printer.print_entries(entries, file=sys.stdout)
 
 
 if __name__ == "__main__":

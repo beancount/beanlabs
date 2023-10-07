@@ -73,29 +73,30 @@ def match_postings(left_postings, rght_postings, keyfun):
     for units in common_keys:
         left_postings = left_map[units]
         rght_postings = rght_map[units]
-        if len(left_postings) != 1 or len(rght_postings) != 1:
+        if len(left_postings) == 1 and len(rght_postings) == 1:
+            del left_map[units]
+            del rght_map[units]
             continue
-        del left_map[units]
-        del rght_map[units]
 
-        meta = {
-            "left": left_postings[0].txn.narration,
-            "rght": rght_postings[0].txn.narration,
-        }
-        txn = data.Transaction(
-            meta,
-            left_postings[0].txn.date,
-            "*",
-            None,
-            "",
-            None,
-            None,
-            [
-                left_postings[0].posting,
-                rght_postings[0].posting,
-            ],
-        )
-        # printer.print_entry(txn)
+        if 1:
+            meta = {
+                "left": left_postings[0].txn.narration,
+                "rght": rght_postings[0].txn.narration,
+            }
+            txn = data.Transaction(
+                meta,
+                left_postings[0].txn.date,
+                "*",
+                None,
+                "",
+                None,
+                None,
+                [
+                    left_postings[0].posting,
+                    rght_postings[0].posting,
+                ],
+            )
+            printer.print_entry(txn)
 
     left_remain = list(itertools.chain.from_iterable(left_map.values()))
     rght_remain = list(itertools.chain.from_iterable(rght_map.values()))
@@ -142,10 +143,12 @@ def main():
     if args.min_date:
         left_postings = [tp for tp in left_postings if tp.txn.date >= args.min_date]
         rght_postings = [tp for tp in rght_postings if tp.txn.date >= args.min_date]
+    # print(len(left_postings), len(rght_postings))
 
     # Progressively try different unique keys to match up postings to each other
     # unambiguously.
-    for keyfun in [lambda tp: amount.abs(tp.posting.units), lambda tp: tp.txn.links]:
+    # for keyfun in [lambda tp: amount.abs(tp.posting.units), lambda tp: tp.txn.links]:
+    for keyfun in [lambda tp: tp.txn.links]:
         matched, (left_postings, rght_postings) = match_postings(
             left_postings, rght_postings, keyfun
         )
