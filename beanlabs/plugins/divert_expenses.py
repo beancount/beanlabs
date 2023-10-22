@@ -70,9 +70,7 @@ def divert_expenses(entries, options_map, config_str):
             overlapping = tags & entry.tags
             if overlapping:
                 for tag in overlapping:
-                    entry = replace_diverted_accounts(
-                        entry, config_dict[tag], acctypes
-                    )
+                    entry = replace_diverted_accounts(entry, config_dict[tag], acctypes)
         new_entries.append(entry)
 
     return new_entries, errors
@@ -95,8 +93,8 @@ def replace_diverted_accounts(entry, replacement_account, acctypes):
             divert is None
             and account_types.is_account_type(acctypes.expenses, posting.account)
         ):
-            posting = posting._replace(
-                account=replacement_account, meta={"diverted_account": posting.account}
-            )
+            meta = posting.meta.copy()
+            meta.update({"diverted_account": posting.account})
+            posting = posting._replace(account=replacement_account, meta=meta)
         new_postings.append(posting)
     return entry._replace(postings=new_postings)
