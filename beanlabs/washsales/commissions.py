@@ -117,10 +117,10 @@ def remove_commissions(entries, unused_options_map, config):
                 new_postings.extend(
                     [
                         data.Posting(
-                            income_account, cposition.units, None, None, None, None
+                            income_account, cposition.units, None, None, None, entry.meta
                         ),
                         data.Posting(
-                            outgoing_account, -cposition.units, None, None, None, None
+                            outgoing_account, -cposition.units, None, None, None, entry.meta
                         ),
                     ]
                 )
