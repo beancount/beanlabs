@@ -3,6 +3,7 @@ __copyright__ = "Copyright (C) 2017  Martin Blais"
 __license__ = "GNU GPLv2"
 
 # Skip the tests if oauth2client is not available.
+# TODO(blais, 2023-11-18): oauth2client is deprecated.
 import unittest
 import pytest
 oauth2client = pytest.importorskip('oauth2client')

@@ -8,6 +8,7 @@ rewrites them to convert its inflows to a single account.
 import argparse
 import logging
 import re
+import regex
 import sys
 from typing import Dict
 
@@ -46,7 +47,7 @@ def parse_translate_map(translate_options):
     """Convert the --translate option to a dict."""
     translate_map = {}
     for translate in translate_options:
-        match = re.match("({})=({})$".format(ACCOUNT_RE, ACCOUNT_RE), translate)
+        match = regex.match(r"({})=({})$".format(ACCOUNT_RE, ACCOUNT_RE), translate)
         assert match
         tfrom, tto = match.groups()
         translate_map[tfrom] = tto

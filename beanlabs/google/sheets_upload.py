@@ -36,6 +36,8 @@ following libraries for this to work:
  * oauth2client
  * httplib2
 
+(TODO(blais, 2023-11-18): oauth2client is deprecated.)
+
 Moreover, you will need to enable the Google Sheets API in the developer console
 and download the Client Secrets that Google provides to ~/.google-apis.json. (You
 can override this location with the GOOGLE_APIS environment variable.)

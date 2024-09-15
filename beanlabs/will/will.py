@@ -9,6 +9,8 @@ output that should be readable by a layperson.
 
 A special field 'institution' is detected to identify root accounts that should
 be included in the document rendered by this script.
+
+WARNING: This is obsolete. I used newer, simpler scripts to do this type of thing.
 """
 __copyright__ = "Copyright (C) 2015-2016  Martin Blais"
 __license__ = "GNU GPLv2"

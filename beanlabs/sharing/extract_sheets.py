@@ -192,7 +192,7 @@ def main():
 
     parser.add_argument(
         "--program-key",
-        default="personal-accounting",
+        default="personal-drive-service-account",
         action="store",
         help="Program key for Google API key",
     )
